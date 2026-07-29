@@ -8,7 +8,8 @@ HIGH window (~14 of 400 ticks for OFF=150 counts at 50Hz).
 """
 import wasmtime
 
-WASM = "/tmp/opencode/pca9685-chip/build/pca9685.wasm"
+import sys
+WASM = sys.argv[1] if len(sys.argv) > 1 else "dist/pca9685.wasm"
 
 store = wasmtime.Store()
 linker = wasmtime.Linker(store.engine)
