@@ -21,8 +21,10 @@ with the Adafruit `Adafruit_PWMServoDriver` Arduino library.
 - **MODE1 sleep behavior** — outputs hold LOW while the SLEEP bit is set (so the
   Adafruit `begin()` → sleep → prescale → wake sequence behaves like real hardware)
 - **Full-ON / Full-OFF** special cases (`ON_H`/`OFF_H` bit 4)
-- **Real 50 Hz PWM edges** on 16 output pins — canvas servos see proper pulse widths
-  (400-tick frame at 50 µs/tick ≈ ±2° quantization)
+- **Event-driven 50 Hz PWM edges** on 16 output pins — a single one-shot timer is
+  re-armed to the soonest edge, so pulse widths land within scheduler jitter of the
+  commanded value (no tick-grid quantization), at ~1 timer fire per edge instead of a
+  constant kHz tick storm
 - **Verified against a simulated Adafruit_PWMServoDriver transaction sequence**
   (see `test_chip.py` — replicates `begin()`, `setPWMFreq(50)`, and per-channel
   `setPWM()` bursts and asserts the resulting duty cycles)
@@ -75,12 +77,14 @@ $WASI_SDK/bin/clang \
 
 `test_chip.py` instantiates the compiled WASM under
 [wasmtime](https://wasmtime.dev/) with a stubbed Velxio host, drives the same
-I2C transaction sequence `Adafruit_PWMServoDriver` generates, fires 400 frame
-ticks, and asserts the duty cycles:
+I2C transaction sequence `Adafruit_PWMServoDriver` generates, and asserts the
+event-driven schedule deterministically (armed edge deadlines, not wall-clock
+sleeps, so it's CI-stable):
 
 ```
-PWM0 HIGH ticks: 14/400  (OFF=150 counts ≈ 732 µs — expected ~14)
-PWM1 HIGH ticks: 29/400  (OFF=300 counts ≈ 1465 µs — expected ~29)
+PWM0 rise at config time
+armed fall delay from rise: 725us   (OFF=150 counts ≈ 732 µs)
+PWM1 fall - PWM0 fall deadline: 733us (shared frame clock, OFF=300-150)
 ALL TESTS PASSED
 ```
 
