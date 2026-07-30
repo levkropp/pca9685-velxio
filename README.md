@@ -77,14 +77,15 @@ $WASI_SDK/bin/clang \
 
 `test_chip.py` instantiates the compiled WASM under
 [wasmtime](https://wasmtime.dev/) with a stubbed Velxio host, drives the same
-I2C transaction sequence `Adafruit_PWMServoDriver` generates, and asserts the
-event-driven schedule deterministically (armed edge deadlines, not wall-clock
-sleeps, so it's CI-stable):
+I2C transaction sequence `Adafruit_PWMServoDriver` generates, and verifies the
+engine with host-speed-independent checks — I2C register model (auto-increment
+write/read-back), phase-synced rise for on=0, and the 50 Hz frame period
+measured rise-to-rise:
 
 ```
-PWM0 rise at config time
-armed fall delay from rise: 725us   (OFF=150 counts ≈ 732 µs)
-PWM1 fall - PWM0 fall deadline: 733us (shared frame clock, OFF=300-150)
+I2C register model OK (MODE1=0xA0)
+I2C register model OK (OFF_L=150 read-back)
+frame period (rise to rise): 20194us (expected ~20000us)
 ALL TESTS PASSED
 ```
 
